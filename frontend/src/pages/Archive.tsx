@@ -1,30 +1,23 @@
 import { useState } from 'react';
 import { Note } from '../types';
-import { useLocalStorage } from '../hooks/useLocalStorage';
+import { useNotes } from '../hooks/useNotes';
 import { NoteCard } from '../components/NoteCard';
 import { NoteForm } from '../components/NoteForm';
 import { Modal } from '../components/Modal';
-import { Button } from '../components/Button';
 import { EmptyState } from '../components/EmptyState';
 
-export function Home() {
-  const { activeNotes, addNote, updateNote, deleteNote, archiveNote, unarchiveNote } =
-    useLocalStorage();
+export function Archive() {
+  const { archivedNotes, loading, error, updateNote, deleteNote, archiveNote, unarchiveNote } =
+    useNotes();
 
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredNotes = activeNotes.filter(
+  const filteredNotes = archivedNotes.filter(
     (note) =>
       note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       note.content.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  const handleAdd = (title: string, content: string) => {
-    addNote(title, content);
-    setIsAddModalOpen(false);
-  };
 
   const handleUpdate = (title: string, content: string) => {
     if (!editingNote) return;
@@ -39,29 +32,28 @@ export function Home() {
   return (
     <div className="min-h-screen bg-v1-cream">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-2xl font-bold text-v1-dark">My Notes</h1>
-            <p className="text-gray-500 text-sm mt-0.5">
-              {activeNotes.length} {activeNotes.length === 1 ? 'note' : 'notes'}
-            </p>
+        {error && (
+          <div role="alert" className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
           </div>
-          <Button
-            variant="primary"
-            size="md"
-            onClick={() => setIsAddModalOpen(true)}
-            className="sm:w-auto w-full"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            New Note
-          </Button>
+        )}
+        {/* Page Header */}
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-8 h-8 bg-v1-dark rounded-lg flex items-center justify-center">
+              <svg className="w-4 h-4 text-v1-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8l1 12a2 2 0 002 2h8a2 2 0 002-2L19 8" />
+              </svg>
+            </div>
+            <h1 className="text-2xl font-bold text-v1-dark">Archive</h1>
+          </div>
+          <p className="text-gray-500 text-sm ml-11">
+            {archivedNotes.length} archived {archivedNotes.length === 1 ? 'note' : 'notes'}
+          </p>
         </div>
 
         {/* Search */}
-        {activeNotes.length > 0 && (
+        {archivedNotes.length > 0 && (
           <div className="mb-6">
             <div className="relative">
               <svg
@@ -74,7 +66,7 @@ export function Home() {
               </svg>
               <input
                 type="text"
-                placeholder="Search notes..."
+                placeholder="Search archived notes..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent bg-white"
@@ -83,21 +75,35 @@ export function Home() {
           </div>
         )}
 
+        {/* Info Banner */}
+        {archivedNotes.length > 0 && (
+          <div className="bg-white border border-gray-200 rounded-xl p-4 mb-6 flex items-start gap-3">
+            <svg className="w-5 h-5 text-v1-teal mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-sm text-gray-500">
+              Click the <span className="font-medium text-v1-teal">restore icon</span> on any note to move it back to your active notes.
+            </p>
+          </div>
+        )}
+
         {/* Notes Grid */}
-        {activeNotes.length === 0 ? (
+        {loading ? (
+          <p className="text-sm text-gray-500">Loading notes...</p>
+        ) : archivedNotes.length === 0 ? (
           <EmptyState
-            message="No notes yet"
-            subMessage="Click 'New Note' to create your first note."
+            message="Archive is empty"
+            subMessage="Notes you archive will appear here."
             icon={
               <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8l1 12a2 2 0 002 2h8a2 2 0 002-2L19 8" />
               </svg>
             }
           />
         ) : filteredNotes.length === 0 ? (
           <EmptyState
-            message="No matching notes"
-            subMessage={`No notes match "${searchQuery}"`}
+            message="No matching archived notes"
+            subMessage={`No archived notes match "${searchQuery}"`}
           />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -115,23 +121,11 @@ export function Home() {
         )}
       </div>
 
-      {/* Add Modal */}
-      <Modal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        title="New Note"
-      >
-        <NoteForm
-          onSave={handleAdd}
-          onCancel={() => setIsAddModalOpen(false)}
-        />
-      </Modal>
-
       {/* Edit Modal */}
       <Modal
         isOpen={editingNote !== null}
         onClose={() => setEditingNote(null)}
-        title="Edit Note"
+        title="Edit Archived Note"
       >
         {editingNote && (
           <NoteForm
