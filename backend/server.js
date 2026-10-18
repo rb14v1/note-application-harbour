@@ -91,8 +91,12 @@ function readNoteBody(body) {
   return { title, content };
 }
 
+// Sorted here, not by the database: Cosmos DB's MongoDB API refuses to sort on a field that has no index, and only
+// _id is indexed by default. A notes list is small, so sorting in memory is the simpler and safer choice.
 notes.get('/', asyncRoute(async (_req, res) => {
-  res.json(await Note.find().sort({ createdAt: -1 }));
+  const all = await Note.find();
+  all.sort((a, b) => b.createdAt - a.createdAt || b._id.toString().localeCompare(a._id.toString()));
+  res.json(all);
 }));
 
 notes.post('/', asyncRoute(async (req, res) => {
