@@ -38,7 +38,7 @@ jobs:
         run: echo "name=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
       - uses: docker/build-push-action@v6
         with:
-          build-args: ${{ matrix.component == 'frontend' && 'VITE_API_URL=https://note-app-efg-backend.yellowmushroom-de1276c5.uksouth.azurecontainerapps.io/api' || '' }}
+          build-args: ${{ matrix.component == 'frontend' && 'VITE_API_URL=https://notes-app-mac-backend.ashyground-840d8093.uksouth.azurecontainerapps.io/api' || '' }}
           context: ${{ steps.dockerfile.outputs.context }}
           file: ${{ steps.dockerfile.outputs.path }}
           push: true
