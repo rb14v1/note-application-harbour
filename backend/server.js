@@ -3,6 +3,10 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
+const pino = require('pino');
+const pinoHttp = require('pino-http');
+
+const logger = pino({ level: 'info' });
 
 const PORT = process.env.PORT || 8080;
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -40,7 +44,7 @@ const Note = mongoose.model('Note', noteSchema);
 // health check and the platform does not restart it while the database is still being reached.
 async function connectToDatabase() {
   if (!MONGODB_URI) {
-    console.warn('MONGODB_URI is not set; the notes API will answer 503 until it is.');
+    logger.warn('MONGODB_URI is not set; the notes API will answer 503 until it is.');
     return;
   }
   for (;;) {
@@ -50,10 +54,10 @@ async function connectToDatabase() {
         serverSelectionTimeoutMS: 10000,
         retryWrites: false,
       });
-      console.log('Connected to MongoDB');
+      logger.info('Connected to MongoDB');
       return;
     } catch (err) {
-      console.error(`MongoDB connection failed: ${err.message}. Retrying in 5 seconds.`);
+      logger.error({ err }, `MongoDB connection failed: ${err.message}. Retrying in 5 seconds.`);
       await new Promise((resolve) => setTimeout(resolve, 5000));
     }
   }
@@ -61,6 +65,7 @@ async function connectToDatabase() {
 
 const app = express();
 app.use(cors(allowedOrigins.length > 0 ? { origin: allowedOrigins } : {}));
+app.use(pinoHttp({ logger }));
 app.use(express.json({ limit: '1mb' }));
 
 app.get('/healthz', (_req, res) => {
@@ -131,11 +136,11 @@ app.use('/api/notes', notes);
 
 app.use((err, _req, res, _next) => {
   if (err.type === 'entity.parse.failed') return res.status(400).json({ error: 'Invalid JSON.' });
-  console.error(err);
+  logger.error({ err }, 'Unhandled error');
   res.status(500).json({ error: 'Something went wrong.' });
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Notes API listening on port ${PORT}`);
+  logger.info(`Notes API listening on port ${PORT}`);
   connectToDatabase();
 });
