@@ -3,10 +3,39 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
-const pino = require('pino');
-const pinoHttp = require('pino-http');
+const promClient = require('prom-client');
 
-const logger = pino({ level: 'info' });
+// Prometheus metrics setup
+const register = new promClient.Registry();
+promClient.collectDefaultMetrics({ register });
+
+const httpRequestCount = new promClient.Counter({
+  name: 'http_requests_total',
+  help: 'Total number of HTTP requests',
+  labelNames: ['method', 'route', 'status_code'],
+  registers: [register],
+});
+
+const httpRequestDuration = new promClient.Histogram({
+  name: 'http_request_duration_seconds',
+  help: 'HTTP request latency in seconds',
+  labelNames: ['method', 'route', 'status_code'],
+  buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5],
+  registers: [register],
+});
+
+const httpErrorCount = new promClient.Counter({
+  name: 'http_errors_total',
+  help: 'Total number of HTTP errors (status >= 400)',
+  labelNames: ['method', 'route', 'status_code'],
+  registers: [register],
+});
+
+const activeConnections = new promClient.Gauge({
+  name: 'http_active_connections',
+  help: 'Number of active HTTP connections',
+  registers: [register],
+});
 
 const PORT = process.env.PORT || 8080;
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -44,7 +73,7 @@ const Note = mongoose.model('Note', noteSchema);
 // health check and the platform does not restart it while the database is still being reached.
 async function connectToDatabase() {
   if (!MONGODB_URI) {
-    logger.warn('MONGODB_URI is not set; the notes API will answer 503 until it is.');
+    console.warn('MONGODB_URI is not set; the notes API will answer 503 until it is.');
     return;
   }
   for (;;) {
@@ -54,10 +83,10 @@ async function connectToDatabase() {
         serverSelectionTimeoutMS: 10000,
         retryWrites: false,
       });
-      logger.info('Connected to MongoDB');
+      console.log('Connected to MongoDB');
       return;
     } catch (err) {
-      logger.error({ err }, `MongoDB connection failed: ${err.message}. Retrying in 5 seconds.`);
+      console.error(`MongoDB connection failed: ${err.message}. Retrying in 5 seconds.`);
       await new Promise((resolve) => setTimeout(resolve, 5000));
     }
   }
@@ -65,8 +94,27 @@ async function connectToDatabase() {
 
 const app = express();
 app.use(cors(allowedOrigins.length > 0 ? { origin: allowedOrigins } : {}));
-app.use(pinoHttp({ logger }));
 app.use(express.json({ limit: '1mb' }));
+
+// Track active connections and record request metrics
+app.use((req, res, next) => {
+  activeConnections.inc();
+  const end = httpRequestDuration.startTimer();
+  res.on('finish', () => {
+    const route = req.route ? req.route.path : req.path;
+    const labels = { method: req.method, route, status_code: res.statusCode };
+    httpRequestCount.inc(labels);
+    end(labels);
+    if (res.statusCode >= 400) httpErrorCount.inc(labels);
+    activeConnections.dec();
+  });
+  next();
+});
+
+app.get('/metrics', async (_req, res) => {
+  res.set('Content-Type', register.contentType);
+  res.end(await register.metrics());
+});
 
 app.get('/healthz', (_req, res) => {
   res.json({ status: 'ok', database: mongoose.connection.readyState === 1 ? 'connected' : 'not connected' });
@@ -136,11 +184,11 @@ app.use('/api/notes', notes);
 
 app.use((err, _req, res, _next) => {
   if (err.type === 'entity.parse.failed') return res.status(400).json({ error: 'Invalid JSON.' });
-  logger.error({ err }, 'Unhandled error');
+  console.error(err);
   res.status(500).json({ error: 'Something went wrong.' });
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-  logger.info(`Notes API listening on port ${PORT}`);
+  console.log(`Notes API listening on port ${PORT}`);
   connectToDatabase();
 });
