@@ -21,8 +21,8 @@ provider "azurerm" {
 
 
 resource "azurerm_cosmosdb_account" "cosmos_mongo" {
-  name                = "cosmosmongo-note-app-lmnp"
-  resource_group_name = "note-app-lmnp"
+  name                = "cosmosmongo-notes-abz"
+  resource_group_name = "notes-abz"
   location            = "uksouth"
   offer_type          = "Standard"
   kind                = "MongoDB"
@@ -44,29 +44,23 @@ resource "azurerm_cosmosdb_account" "cosmos_mongo" {
     location          = "uksouth"
     failover_priority = 0
   }
-
-  backup {
-    type               = "Continuous"
-    tier               = "Continuous30Days"
-    storage_redundancy = "Geo"
-  }
 }
 
 resource "azurerm_private_dns_zone" "cosmos_mongo_dns_zone" {
   name                = "privatelink.mongo.cosmos.azure.com"
-  resource_group_name = "note-app-lmnp"
+  resource_group_name = "notes-abz"
 }
 
 resource "azurerm_private_dns_zone_virtual_network_link" "cosmos_mongo_dns_zone_link" {
-  name                  = "link-note-app-lmnp"
-  resource_group_name   = "note-app-lmnp"
+  name                  = "link-notes-abz"
+  resource_group_name   = "notes-abz"
   private_dns_zone_name = azurerm_private_dns_zone.cosmos_mongo_dns_zone.name
   virtual_network_id    = var.vnet_id
 }
 
 resource "azurerm_private_endpoint" "cosmos_mongo_pe" {
-  name                = "pe-cosmosmongo-note-app-lmnp"
-  resource_group_name = "note-app-lmnp"
+  name                = "pe-cosmosmongo-notes-abz"
+  resource_group_name = "notes-abz"
   location            = "uksouth"
   subnet_id           = var.subnet_id
 
