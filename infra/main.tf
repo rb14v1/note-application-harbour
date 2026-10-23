@@ -44,6 +44,11 @@ resource "azurerm_cosmosdb_account" "cosmos_mongo" {
     location          = "uksouth"
     failover_priority = 0
   }
+
+  backup {
+    type = "Continuous"
+    tier = "Continuous30Days"
+  }
 }
 
 resource "azurerm_private_dns_zone" "cosmos_mongo_dns_zone" {
