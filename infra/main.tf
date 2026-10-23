@@ -21,12 +21,18 @@ provider "azurerm" {
 
 
 resource "azurerm_cosmosdb_account" "cosmos_mongo" {
-  name                = "cosmosmongo-notes-abz"
-  resource_group_name = "notes-abz"
+  name                = "cosmosmongo-notes-act"
+  resource_group_name = "notes-act"
   location            = "uksouth"
   offer_type          = "Standard"
   kind                = "MongoDB"
   public_network_access_enabled = false
+
+  # Pinned, not left to Azure's default. The RU-mode Mongo API serves 3.2/3.6/4.0/4.2, and a current
+  # driver against an old wire protocol fails at connect time — after terraform has already spent
+  # fifteen minutes. 4.2 is the newest this API offers, so it is the widest driver compatibility
+  # available without moving to vCore.
+  mongo_server_version = "4.2"
 
   capabilities {
     name = "EnableServerless"
@@ -44,28 +50,23 @@ resource "azurerm_cosmosdb_account" "cosmos_mongo" {
     location          = "uksouth"
     failover_priority = 0
   }
-
-  backup {
-    type = "Continuous"
-    tier = "Continuous30Days"
-  }
 }
 
 resource "azurerm_private_dns_zone" "cosmos_mongo_dns_zone" {
   name                = "privatelink.mongo.cosmos.azure.com"
-  resource_group_name = "notes-abz"
+  resource_group_name = "notes-act"
 }
 
 resource "azurerm_private_dns_zone_virtual_network_link" "cosmos_mongo_dns_zone_link" {
-  name                  = "link-notes-abz"
-  resource_group_name   = "notes-abz"
+  name                  = "link-notes-act"
+  resource_group_name   = "notes-act"
   private_dns_zone_name = azurerm_private_dns_zone.cosmos_mongo_dns_zone.name
   virtual_network_id    = var.vnet_id
 }
 
 resource "azurerm_private_endpoint" "cosmos_mongo_pe" {
-  name                = "pe-cosmosmongo-notes-abz"
-  resource_group_name = "notes-abz"
+  name                = "pe-cosmosmongo-notes-act"
+  resource_group_name = "notes-act"
   location            = "uksouth"
   subnet_id           = var.subnet_id
 
