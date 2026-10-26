@@ -21,8 +21,8 @@ provider "azurerm" {
 
 
 resource "azurerm_cosmosdb_account" "cosmos_mongo" {
-  name                = "cosmosmongo-notes-act"
-  resource_group_name = "notes-act"
+  name                = "cosmosmongo-note-xyzuv"
+  resource_group_name = "note-xyzuv"
   location            = "uksouth"
   offer_type          = "Standard"
   kind                = "MongoDB"
@@ -50,30 +50,23 @@ resource "azurerm_cosmosdb_account" "cosmos_mongo" {
     location          = "uksouth"
     failover_priority = 0
   }
-
-  backup {
-    type                = "Periodic"
-    interval_in_minutes = 240
-    retention_in_hours  = 720  # 30 days
-    storage_redundancy  = "Geo"
-  }
 }
 
 resource "azurerm_private_dns_zone" "cosmos_mongo_dns_zone" {
   name                = "privatelink.mongo.cosmos.azure.com"
-  resource_group_name = "notes-act"
+  resource_group_name = "note-xyzuv"
 }
 
 resource "azurerm_private_dns_zone_virtual_network_link" "cosmos_mongo_dns_zone_link" {
-  name                  = "link-notes-act"
-  resource_group_name   = "notes-act"
+  name                  = "link-note-xyzuv"
+  resource_group_name   = "note-xyzuv"
   private_dns_zone_name = azurerm_private_dns_zone.cosmos_mongo_dns_zone.name
   virtual_network_id    = var.vnet_id
 }
 
 resource "azurerm_private_endpoint" "cosmos_mongo_pe" {
-  name                = "pe-cosmosmongo-notes-act"
-  resource_group_name = "notes-act"
+  name                = "pe-cosmosmongo-note-xyzuv"
+  resource_group_name = "note-xyzuv"
   location            = "uksouth"
   subnet_id           = var.subnet_id
 
