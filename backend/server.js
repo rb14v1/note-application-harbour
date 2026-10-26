@@ -42,6 +42,14 @@ const activeConnections = new promClient.Gauge({
   registers: [register],
 });
 
+// Fail fast when required configuration is missing instead of starting in a broken state.
+const REQUIRED_ENV_VARS = ['MONGODB_URI'];
+const missingEnvVars = REQUIRED_ENV_VARS.filter((name) => !process.env[name] || !process.env[name].trim());
+if (missingEnvVars.length > 0) {
+  logger.error(`Missing required environment variables: ${missingEnvVars.join(', ')}. See backend/.env.example.`);
+  throw new Error(`Missing required environment variables: ${missingEnvVars.join(', ')}`);
+}
+
 const PORT = process.env.PORT || 8080;
 const MONGODB_URI = process.env.MONGODB_URI;
 const MONGODB_DB = process.env.MONGODB_DB || 'notes';
@@ -77,10 +85,6 @@ const Note = mongoose.model('Note', noteSchema);
 // Keeps trying until the database answers. The server stays up meanwhile, so the container passes its
 // health check and the platform does not restart it while the database is still being reached.
 async function connectToDatabase() {
-  if (!MONGODB_URI) {
-    logger.warn('MONGODB_URI is not set; the notes API will answer 503 until it is.');
-    return;
-  }
   for (;;) {
     try {
       await mongoose.connect(MONGODB_URI, {
