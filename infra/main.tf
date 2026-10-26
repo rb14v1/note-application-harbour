@@ -21,8 +21,8 @@ provider "azurerm" {
 
 
 resource "azurerm_cosmosdb_account" "cosmos_mongo" {
-  name                = "cosmosmongo-notes-test-1"
-  resource_group_name = "notes-test-1"
+  name                = "cosmosmongo-notes-test-3"
+  resource_group_name = "notes-test-3"
   location            = "uksouth"
   offer_type          = "Standard"
   kind                = "MongoDB"
@@ -54,19 +54,19 @@ resource "azurerm_cosmosdb_account" "cosmos_mongo" {
 
 resource "azurerm_private_dns_zone" "cosmos_mongo_dns_zone" {
   name                = "privatelink.mongo.cosmos.azure.com"
-  resource_group_name = "notes-test-1"
+  resource_group_name = "notes-test-3"
 }
 
 resource "azurerm_private_dns_zone_virtual_network_link" "cosmos_mongo_dns_zone_link" {
-  name                  = "link-notes-test-1"
-  resource_group_name   = "notes-test-1"
+  name                  = "link-notes-test-3"
+  resource_group_name   = "notes-test-3"
   private_dns_zone_name = azurerm_private_dns_zone.cosmos_mongo_dns_zone.name
   virtual_network_id    = var.vnet_id
 }
 
 resource "azurerm_private_endpoint" "cosmos_mongo_pe" {
-  name                = "pe-cosmosmongo-notes-test-1"
-  resource_group_name = "notes-test-1"
+  name                = "pe-cosmosmongo-notes-test-3"
+  resource_group_name = "notes-test-3"
   location            = "uksouth"
   subnet_id           = var.subnet_id
 
